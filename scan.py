@@ -4,6 +4,7 @@ import sys
 import os
 import argparse
 from analyzer.binary_mips import *
+from analyzer.binary_arm import *
 from kingcore.color import Color
 
 if len(sys.argv) < 3:
