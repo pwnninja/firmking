@@ -1,4 +1,4 @@
-# firmking
+# Firmking
 
 # Usage:
 
