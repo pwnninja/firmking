@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+<!--
+This XSLT stylesheet transforms an XML report of LAN hosts received from a CGI procedure
+into an HTML display as appropriate for a specific UI.
+-->
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+<xsl:output method="xml" indent="yes"/>
+<xsl:template match="/">
+<h3>DHCP CLIENT LIST FOR GUEST ZONE:<xsl:value-of select="count(//client)"/></h3>
+<table class="formlisting" summary="" cellspacing="1" cellpadding="0">
+<col width="26%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="12%" />
+<col width="12%" />
+<thead>
+<tr>
+<th>Hostname</th>
+<th>Assigned IP</th>
+<th>Hardware Address</th>
+<th>Expires</th>
+<th style="display:none"></th>
+<th style="display:none"></th>
+</tr>
+</thead>
+<tfoot>
+</tfoot>
+<tbody>
+<xsl:apply-templates/>
+</tbody>
+</table>
+</xsl:template>
+<xsl:template match="client">
+<tr>
+<xsl:apply-templates select="host_name"/>
+<xsl:apply-templates select="ip_address"/>
+<xsl:apply-templates select="mac"/>
+<xsl:apply-templates select="seconds_remaining"/>
+<xsl:if test="number(is_reservation/text()) = 1">
+<td/>
+<td/>
+</xsl:if>
+<xsl:if test="number(is_reservation/text()) = 0">
+<td style="display:none">
+<xsl:element name="a">
+<xsl:attribute name="href">
+javascript:revokeLease('<xsl:value-of select="ip_address/text()"/>');
+</xsl:attribute>
+Revoke
+</xsl:element>
+</td>
+<td style="display:none">
+<xsl:element name="a">
+<xsl:attribute name="href">
+javascript:reserveLease('<xsl:value-of select="ip_address/text()"/>', '<xsl:value-of select="mac/text()"/>', '<xsl:value-of select="host_name/text()"/>');
+</xsl:attribute>
+Reserve
+</xsl:element>
+</td>
+</xsl:if>
+</tr>
+</xsl:template>
+<xsl:template match="mac">
+<td>
+<xsl:value-of select="text()"/>
+</td>
+</xsl:template>
+<xsl:template match="ip_address">
+<td>
+<xsl:value-of select="text()"/>
+</td>
+</xsl:template>
+<xsl:template match="host_name">
+<td>
+<xsl:value-of select="text()"/>
+</td>
+</xsl:template>
+<xsl:template match="seconds_remaining">
+<td>
+<!-- Days -->
+<xsl:variable name="seconds" select="number(text())"/>
+<xsl:if test="($seconds = 4294967295) or (number(../is_reservation/text()) != 0)">
+Never
+</xsl:if>
+<xsl:if test="($seconds != 4294967295)  and (number(../is_reservation/text()) = 0)">
+<xsl:variable name="days" select="floor($seconds div 86400)"/>
+<xsl:if test="$days &gt; 0">
+<xsl:value-of select="$days"/>
+Days
+</xsl:if>
+<!-- Hours -->
+<xsl:variable name="remain1" select="$seconds mod 86400"/>
+<xsl:variable name="hours" select="floor($remain1 div 3600)"/>
+<xsl:if test="$hours &gt; 0">
+<xsl:value-of select="$hours"/>
+Hours
+</xsl:if>
+<!-- Minutes -->
+<xsl:variable name="remain2" select="$remain1 mod 3600"/>
+<xsl:variable name="minutes" select="floor($remain2 div 60)"/>
+<xsl:if test="$minutes &gt; 0">
+<xsl:value-of select="$minutes"/>
+Minutes
+</xsl:if>
+</xsl:if>
+</td>
+</xsl:template>
+</xsl:stylesheet>

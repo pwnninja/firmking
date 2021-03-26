@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!--
+This XSLT stylesheet transforms an XML report of LAN hosts received from a CGI procedure
+into an HTML display as appropriate for a specific UI.
+-->
+
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+	<xsl:output method="html" indent="yes"/>
+	<xsl:template match="/">
+		<select id="select_mac">
+			<xsl:attribute name="modified">ignore</xsl:attribute>
+			<option value="-1">Computer Name</option>
+			<xsl:apply-templates />
+		</select>
+	</xsl:template>
+	<xsl:template match="client">
+		<option>
+			<xsl:attribute name="value"><xsl:value-of select="mac"/></xsl:attribute>
+			<xsl:choose>
+				<xsl:when test="string-length(host_name) > 0">
+				<xsl:value-of select="host_name"/>
+					<xsl:text>(</xsl:text>
+					<xsl:value-of select="mac"/>
+					<xsl:text>)</xsl:text>
+				</xsl:when>
+				<xsl:otherwise>
+					<xsl:value-of select="mac"/>
+				</xsl:otherwise>
+			</xsl:choose>
+		</option>
+	</xsl:template>
+	<xsl:template match="text()" priority="-1" />
+</xsl:stylesheet>
+

@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# place the commands to run after the pppd dial up successfully.
+echo "[ip-down]"
+echo "[ip-down.sh] [0]$0 [1]$1 [2]$2 [3]$3 [4]$4 [5]$5 [6]$6"
+
+wanmode=`nvram_get 2860 wanConnectionMode`
+lan_ip=`nvram_get 2860 lan_ipaddr`
+nat_en=`nvram_get 2860 natEnabled`
+pppoe_mode=`nvram_get 2860 wan_pppoe_opmode`
+
+
+
+
+if [ "$wanmode" == "L2TP" -o "$wanmode" == "PPTP" ]; then
+	gateway=`cat /etc/route`
+	route del default
+	route add default gw $gateway
+	#修改pptp切换为ruppoe时不能上网问题
+elif [ "$wanmode" = "PPPOE" -o "$wanmode" = "RUPPPOE" ]; then
+     #记录PPPOE按需拨号，重新拉起wan脚本释放地址和拉起pppd进程
+	 if [ "$pppoe_mode" != "KeepAlive" ]; then
+	    #nvram_set 2860 ppoe_demand_status 0
+		echo "0" > /tmp/ppoe_demand_status
+	 fi
+	 gpio l 40 0 4000 1 1 4000
+fi
+./sbin/miniupnpd.sh remove
+#./sbin/portal_manage.sh flush
+#./sbin/portal_manage.sh add

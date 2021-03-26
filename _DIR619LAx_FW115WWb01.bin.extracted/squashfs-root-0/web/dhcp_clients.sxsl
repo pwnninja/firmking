@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<!--
+This XSLT stylesheet transforms an XML report of LAN hosts received from a CGI procedure
+into an HTML display as appropriate for a specific UI.
+-->
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+<xsl:output method="xml" indent="yes"/>
+<xsl:template match="/">
+<h3>DHCP Client List</h3>
+<table class="formlisting" border="0" cellpadding="0" cellspacing="1">
+<col width="23%" style='white-space:nowrap'/>
+<col width="20%" />
+<col width="23%" />
+<col width="34%" />
+<thead>
+<tr>
+<th class="duple">Host Name</th>
+<th class="duple">IP Address</th>
+<th class="duple">MAC Address</th>
+<th class="duple">Expired Time</th>
+</tr>
+</thead>
+<tfoot>
+</tfoot>
+<tbody>
+<xsl:apply-templates/>
+</tbody>
+</table>
+</xsl:template>
+<xsl:template match="client">
+<tr>
+<xsl:apply-templates select="host_name"/>
+<xsl:apply-templates select="ip_address"/>
+<xsl:apply-templates select="mac"/>
+<xsl:apply-templates select="seconds_remaining"/>
+<xsl:if test="number(is_reservation/text()) = 1">
+<td/>
+<td/>
+</xsl:if>
+</tr>
+</xsl:template>
+<xsl:template match="mac">
+<td>
+<xsl:value-of select="text()"/>
+</td>
+</xsl:template>
+<xsl:template match="ip_address">
+<td>
+<xsl:value-of select="text()"/>
+</td>
+</xsl:template>
+<xsl:template match="host_name">
+<td>
+<xsl:value-of select="text()"/>
+</td>
+</xsl:template>
+<xsl:template match="seconds_remaining">
+<td>
+<!-- Days -->
+<xsl:variable name="seconds" select="number(text())"/>
+<xsl:if test="($seconds = 4294967295) or (number(../is_reservation/text()) != 0)">
+Never
+</xsl:if>
+<xsl:if test="($seconds != 4294967295)  and (number(../is_reservation/text()) = 0)">
+<xsl:variable name="days" select="floor($seconds div 86400)"/>
+<xsl:if test="$days &gt; 0">
+<xsl:value-of select="$days"/>
+Days
+</xsl:if>
+<!-- Hours -->
+<xsl:variable name="remain1" select="$seconds mod 86400"/>
+<xsl:variable name="hours" select="floor($remain1 div 3600)"/>
+<xsl:if test="$hours &gt; 0">
+<xsl:value-of select="$hours"/>
+Hours
+</xsl:if>
+<!-- Minutes -->
+<xsl:variable name="remain2" select="$remain1 mod 3600"/>
+<xsl:variable name="minutes" select="floor($remain2 div 60)"/>
+<xsl:if test="$minutes &gt; 0">
+<xsl:value-of select="$minutes"/>
+Minutes
+</xsl:if>
+</xsl:if>
+</td>
+</xsl:template>
+</xsl:stylesheet>

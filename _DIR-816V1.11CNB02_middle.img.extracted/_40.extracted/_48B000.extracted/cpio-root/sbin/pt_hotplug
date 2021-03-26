@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# USB-specific hotplug policy agent for T&W Product Test.
+#
+
+
+#
+# What to do with this USB hotplug event?
+#
+case $ACTION in
+
+add)
+	killall -16 product
+	;;
+
+remove)
+	killall -17 product
+	;;
+
+*)
+	killall -17 product
+	;;
+
+esac
+
+

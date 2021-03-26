@@ -1,0 +1,33 @@
+#!/bin/sh
+
+action=$1
+end=$2
+
+case $action in
+        start)
+        	/mydlink/signalc > /dev/null 2>&1 &
+		/mydlink/mydlink-watch-dog.sh signalc 2>&1 &
+        	echo opt.local start ok.
+        ;;
+        stop)
+                killall mydlink-watch-dog.sh
+        	killall signalc
+        	killall tsa
+        	echo "opt.local stop ok."
+        ;;
+        restart)
+		sleep 1
+		killall mydlink-watch-dog.sh
+		killall signalc
+		killall tsa
+		/mydlink/signalc > /dev/null 2>&1 &
+		/mydlink/mydlink-watch-dog.sh signalc 2>&1 &
+        	echo opt.local start ok.
+        ;;
+
+        *)
+        	echo "/mydlink/opt.local {start|stop}"
+        ;;
+esac
+
+exit 0

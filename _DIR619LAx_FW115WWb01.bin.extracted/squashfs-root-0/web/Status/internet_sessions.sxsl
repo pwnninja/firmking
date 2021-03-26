@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+<xsl:output method="html" indent="yes"/>
+<xsl:template match="/">
+<table border="0" cellpadding="0" cellspacing="1" class="formlisting" id="status_activesessions_list" summary="">
+<thead>
+<tr class="form_label_row">
+<th class="formlist_col1">Local</th>
+<th class="formlist_col2">NAT</th>
+<th class="formlist_col3">Internet</th>
+<th class="formlist_col4">Protocol</th>
+<th class="formlist_col5">State</th>
+<th class="formlist_col6">Dir</th>
+<!--
+<th class="formlist_col7">Priority</th>
+-->
+<th class="formlist_col7">Time Out</th>
+</tr>
+</thead>
+<tfoot>
+</tfoot>
+<tbody>
+<xsl:apply-templates/>
+</tbody>
+</table>
+</xsl:template>
+<xsl:template match="session">
+<tr>
+<td>
+<xsl:value-of select="internal_address_and_port"/>
+</td>
+<td>
+<xsl:value-of select="nat_port"/>
+</td>
+<td>
+<xsl:value-of select="external_address_and_port"/>
+</td>
+<td>
+<xsl:value-of select="protocol"/>
+</td>
+<td>
+<xsl:value-of select="tcp_state"/>
+</td>
+<td>
+<xsl:value-of select="direction"/>
+</td>
+<!--
+<td>
+<xsl:value-of select="priority"/>
+</td>
+-->
+<td>
+<xsl:value-of select="time_left"/>
+</td>
+</tr>
+</xsl:template>
+<xsl:template match="text()" priority="-1" />
+</xsl:stylesheet>

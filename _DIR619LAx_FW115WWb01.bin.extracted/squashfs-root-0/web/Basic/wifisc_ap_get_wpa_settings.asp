@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><wpa_settings><ssid>dlink</ssid><wpa_mode>1</wpa_mode><wpa_cipher>1</wpa_cipher><wpa_psk><%getIndexInfo("autokey-32");%></wpa_psk></wpa_settings>

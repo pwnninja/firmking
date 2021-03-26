@@ -1,0 +1,3 @@
+#!/bin/sh
+flash reset
+reboot

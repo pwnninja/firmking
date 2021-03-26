@@ -1,0 +1,1 @@
+<% getInfo("mydlink_admin"); %>

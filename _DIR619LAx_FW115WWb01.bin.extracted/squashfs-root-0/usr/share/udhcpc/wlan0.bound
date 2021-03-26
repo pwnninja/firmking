@@ -1,0 +1,463 @@
+#!/bin/sh
+# udhcpc bound script
+
+RESOLV_CONF="/etc/udhcpc/resolv.conf"
+ETC_RESOLV_CONF="/var/resolv.conf"
+PPP_RESOLV="/etc/ppp/resolv.conf"
+GETMIB="flash get"
+START_FIREWALL=firewall.sh
+START_STATIC_ROUTE=/bin/st_route.sh
+STOP_STATIC_ROUTE=/bin/st_route_del.sh
+PIDFILE=/var/run/dnrd.pid
+LINKFILE=/etc/ppp/link
+NTP_PROCESS=/var/ntp_run
+PPP_MCONNECT=/var/ppp/mconnectfile
+eval `flash get WAN_DHCP`
+
+#restart igmp proxy
+# not include igmpsnoop in TR	
+eval `$GETMIB IGMP_PROXY_DISABLED`
+MAX_DNS=0
+[ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+[ -n "$subnet" ] && NETMASK="netmask $subnet"
+
+/sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+
+echo "$ip" > /var/eth1_ip
+rm -f  /var/wanip_fail 2> /dev/null
+if [ $WAN_DHCP = 4 ] || [ $WAN_DHCP = 6 ]; then
+	
+	if [ -r /var/check_wan ]; then
+	killall -9 udhcpc 2> /dev/null
+	exit
+	fi
+	if [ "$router" ]; then
+		echo $router > /var/eth1_gw
+		if [ $WAN_DHCP = 4 ]; then
+			#eval `$GETMIB PPTP_CONNECTION_TYPE`
+			#if [ $PPTP_CONNECTION_TYPE != 2 ]; then
+				#echo "deleting routers"
+				while route del default dev $interface
+				do :
+				done
+			
+				for i in $router
+				do
+					route add -net default gw $i dev $interface
+				done
+			#fi
+		fi
+		if [ $WAN_DHCP = 6 ]; then
+			#eval `$GETMIB L2TP_CONNECTION_TYPE`
+			#if [ $L2TP_CONNECTION_TYPE != 2 ]; then
+				#echo "deleting routers"
+				while route del default dev $interface
+				do :
+				done
+			
+				for i in $router
+				do
+					route add -net default gw $i dev $interface
+				done
+			#fi
+		fi
+	fi
+	rm -f $ETC_RESOLV_CONF
+	rm -f $RESOLV_CONF
+		for i in $dns
+		do
+		#echo adding dns $i
+		echo nameserver $i >> $ETC_RESOLV_CONF
+		echo nameserver $i >> $RESOLV_CONF
+		if [ $MAX_DNS -le 5 ]; then
+			DNS="$DNS -s $i"
+			MAX_DNS=`expr $MAX_DNS + 1` 
+	fi
+		done
+		
+		eval `$GETMIB DNS1`
+		if [ "$DNS1" != '0.0.0.0' ]; then
+			if [ $MAX_DNS -le 5 ]; then 
+				DNS="$DNS -s $DNS1"
+				MAX_DNS=`expr $MAX_DNS + 1` 
+			fi
+			echo nameserver $DNS1 >> $ETC_RESOLV_CONF
+		fi
+		
+	if [ $WAN_DHCP = 4 ]; then
+		if [ -r /etc/ppp/connectfile ]; then
+			rm -f /etc/ppp/connectfile 2> /dev/null
+		fi
+		killall pptp.sh 2> /dev/null
+		#echo 'Set Static Route'
+		$STOP_STATIC_ROUTE
+		$START_STATIC_ROUTE wlan0 ru
+		if [ -r "$PPP_MCONNECT" ]; then
+			pptp.sh wlan0 mconnect &
+		else
+			pptp.sh wlan0 &
+		fi
+	fi
+	if [ $WAN_DHCP = 6 ]; then
+		if [ -r /etc/ppp/connectfile ]; then
+			rm -f /etc/ppp/connectfile 2> /dev/null
+		fi
+		killall l2tp.sh 2> /dev/null
+		#echo 'Set Static Route'
+		$STOP_STATIC_ROUTE
+		$START_STATIC_ROUTE wlan0 ru
+		if [ -r "$PPP_MCONNECT" ]; then
+			l2tp.sh wlan0 mconnect &
+		else
+			l2tp.sh wlan0 &
+		fi
+	fi
+fi
+
+if [ $WAN_DHCP = 8 ]; then
+	
+	if [ -r /var/check_wan ]; then
+	killall -9 udhcpc 2> /dev/null
+	exit
+	fi
+	
+	setfirewall wanphy
+	if [ "$router" ]; then
+		echo $router > /var/eth1_gw
+		#eval `flash get PPTP_RU_CONNECTION_TYPE`	
+		#if [ $PPTP_RU_CONNECTION_TYPE != 2 ]; then
+	#echo "deleting routers"
+	while route del default dev $interface
+	do :
+	done
+
+	for i in $router
+	do
+		route add -net default gw $i dev $interface
+	done
+	#fi
+	fi
+	if [ -r /etc/ppp/connectfile ]; then
+		rm -f /etc/ppp/connectfile 2> /dev/null
+	fi
+	killall -9 igmpproxy 2> /dev/null
+	if [ $IGMP_PROXY_DISABLED = 0 ]; then
+		igmpproxy wlan0 br0 &
+	fi	
+	killall pptp_ru.sh 2> /dev/null
+	echo done > /var/setwan_check
+	pptp_ru.sh wlan0 &
+fi
+
+if [ $WAN_DHCP = 7 ]; then
+	
+	if [ -r /var/check_wan ]; then
+	killall -9 udhcpc 2> /dev/null
+	exit
+	fi
+	
+	setfirewall wanphy
+	if [ "$router" ]; then
+		echo $router > /var/eth1_gw
+	#echo "deleting routers"
+		if [ ! -r /etc/ppp/link ]; then
+			eval `flash get PPPOE_RU_CONNECT_TYPE`
+			if [ $PPPOE_RU_CONNECT_TYPE != 2 ]; then
+			while route del default dev $interface
+			do :
+			done
+	
+			for i in $router
+			do
+				route add -net default gw $i dev $interface
+			done
+		fi
+			killall -9 igmpproxy 2> /dev/null
+			if [ $IGMP_PROXY_DISABLED = 0 ]; then
+				igmpproxy wlan0 br0 &
+			fi
+		else
+			if [ -r /var/ck_oeru ]; then	
+				CURR_OERU=`cat /var/ck_oeru`	
+				if [ $CURR_OERU = 3 ]; then
+						#ppp0 is up and eth1 up in manual renew case
+						#echo "<<<<ppp0 is up and eth1 up in manual renew case>>>>"
+						killall -9 igmpproxy 2> /dev/null
+						if [ $IGMP_PROXY_DISABLED = 0 ]; then
+							igmpproxy wlan0 br0 &
+						fi
+				fi
+			fi	
+		fi
+	fi
+fi
+if [ $WAN_DHCP = 7 ]; then
+
+	#eval `$GETMIB DNS_MODE`
+	DNS="--cache=off"
+	rm -f $RESOLV_CONF
+	for i in $dns
+	do
+	#echo adding dns $i
+	echo nameserver $i >> $RESOLV_CONF
+	done		
+	
+	if [ -r /var/ck_oeru ]; then		
+		CURR_OERU=`cat /var/ck_oeru`	
+		if [ $CURR_OERU != 2 ]; then
+			#echo "<<<<WAN Phy connect up===>$CURR_OERU>>>>"
+			echo 1 > /var/ck_oeru
+		rm -f $ETC_RESOLV_CONF
+			if [ $WAN_DHCP = 7 ] && [ -r /etc/ppp/link ]; then
+		if [ -r "$PPP_RESOLV" ]; then
+			line_resolv=0
+    			cat $PPP_RESOLV | grep nameserver > /tmp/dhcpc_resolv 
+    			line_resolv=`cat /tmp/dhcpc_resolv | wc -l`
+    			num_resolv=1
+    			while [ $num_resolv -le $line_resolv ];
+    			do
+      			pat0_resolv=` head -n $num_resolv /tmp/dhcpc_resolv | tail -n 1`
+      			pat1_resolv=`echo $pat0_resolv | cut -f2 -d " "`
+		      			if [ $MAX_DNS -le 5 ]; then
+      			DNS="$DNS -s $pat1_resolv"
+		      				MAX_DNS=`expr $MAX_DNS + 1` 
+		      			fi
+		      			if [ $num_resolv = 1 ]; then
+		      				echo nameserver $pat1_resolv > $ETC_RESOLV_CONF
+		      			else
+      			echo nameserver $pat1_resolv >> $ETC_RESOLV_CONF
+		      			fi
+      			num_resolv=`expr $num_resolv + 1`
+    			done
+		fi
+			fi
+			
+		for i in $dns
+		do
+		#echo adding dns $i
+		echo nameserver $i >> $ETC_RESOLV_CONF
+			
+			if [ $MAX_DNS -le 5 ]; then
+		DNS="$DNS -s $i"
+				MAX_DNS=`expr $MAX_DNS + 1` 
+			fi	
+		done
+		
+		eval `$GETMIB DNS1`
+		if [ "$DNS1" != '0.0.0.0' ]; then
+				if [ $MAX_DNS -le 5 ]; then 
+		DNS="$DNS -s $DNS1"
+					MAX_DNS=`expr $MAX_DNS + 1` 
+				fi
+				echo nameserver $DNS1 >> $ETC_RESOLV_CONF
+		fi
+			
+			if [ $WAN_DHCP = 7 ]; then
+		eval `$GETMIB DNS2`
+		if [ "$DNS2" != '0.0.0.0' ]; then
+				
+					if [ $MAX_DNS -le 5 ]; then 
+		DNS="$DNS -s $DNS2"
+						MAX_DNS=`expr $MAX_DNS + 1`
+					fi
+		echo nameserver $DNS2 >> $ETC_RESOLV_CONF
+		fi
+		fi
+			rm -f /tmp/dhcpc_resolv 2> /dev/null
+			echo start DNS Relay Daemon
+			if [ -f $PIDFILE ]; then
+      			PID=`cat $PIDFILE`
+      			kill -9 $PID 
+      			rm -f $PIDFILE
+			fi
+			#echo "$DNS"
+			#dnrd $DNS
+			setfirewall dns_resort
+		fi
+		fi
+		#echo 'Set Static Route'
+		$STOP_STATIC_ROUTE
+		$START_STATIC_ROUTE wlan0 ru
+fi
+
+if [ $WAN_DHCP = 8 ]; then
+
+	#eval `$GETMIB DNS_MODE`
+	DNS="--cache=off"
+			rm -f $ETC_RESOLV_CONF
+			rm -f $RESOLV_CONF
+			
+			for i in $dns
+			do
+			#echo adding dns $i
+			echo nameserver $i >> $ETC_RESOLV_CONF
+			echo nameserver $i >> $RESOLV_CONF
+			if [ $MAX_DNS -le 5 ]; then
+				DNS="$DNS -s $i"
+				MAX_DNS=`expr $MAX_DNS + 1` 
+			fi	
+			done
+		
+			eval `$GETMIB DNS1`
+			if [ "$DNS1" != '0.0.0.0' ]; then
+				if [ $MAX_DNS -le 5 ]; then 
+					DNS="$DNS -s $DNS1"
+					MAX_DNS=`expr $MAX_DNS + 1` 
+				fi
+				echo nameserver $DNS1 >> $ETC_RESOLV_CONF
+		fi	
+		
+		rm -f /tmp/dhcpc_resolv 2> /dev/null
+		echo start DNS Relay Daemon
+		if [ -f $PIDFILE ]; then
+      		PID=`cat $PIDFILE`
+      		kill -9 $PID 
+      		rm -f $PIDFILE
+		fi
+		#echo "$DNS"
+		#dnrd $DNS
+		setfirewall dns_resort
+		#echo 'Set Static Route'
+		$STOP_STATIC_ROUTE
+		$START_STATIC_ROUTE wlan0 ru
+fi
+
+
+
+
+if [ $WAN_DHCP != 3 ] && [ $WAN_DHCP != 4 ] && [ $WAN_DHCP != 6 ] && [ $WAN_DHCP != 7 ] && [ $WAN_DHCP != 8 ]; then
+if [ "$router" ]
+then
+	echo "deleting routers"
+	while route del default dev $interface
+	do :
+	done
+
+	for i in $router
+	do
+		route add -net default gw $i dev $interface
+	done
+fi
+
+echo -n > $RESOLV_CONF
+[ -n "$domain" ] && echo domain $domain >> $RESOLV_CONF
+
+eval `$GETMIB DNS_MODE`
+DNS="--cache=off"
+if [ $DNS_MODE = '0' ]; then
+	for i in $dns
+	do
+		echo adding dns $i
+		echo nameserver $i >> $RESOLV_CONF
+		DNS="$DNS -s $i"
+	done
+else
+	eval `$GETMIB DNS1`
+	if [ "$DNS1" != '0.0.0.0' ]; then
+		DNS="$DNS -s $DNS1"
+		echo nameserver $DNS1 >> $RESOLV_CONF
+	fi
+	eval `$GETMIB DNS2`
+	if [ "$DNS2" != '0.0.0.0' ]; then
+		DNS="$DNS -s $DNS2"
+		echo nameserver $DNS2 >> $RESOLV_CONF
+	fi
+	eval `$GETMIB DNS3`
+	if [ "$DNS3" != '0.0.0.0' ]; then
+		DNS="$DNS -s $DNS3"
+		echo nameserver $DNS3 >> $RESOLV_CONF
+	fi
+fi
+
+
+if [ -f $PIDFILE ]; then
+      PID=`cat $PIDFILE`
+      kill -9 $PID 
+      rm -f $PIDFILE
+fi
+cp $RESOLV_CONF /var/resolv.conf
+eval `flash get DNSRELAY_ENABLED`
+if [ $DNSRELAY_ENABLED = 1 ]; then
+echo start DNS Relay Daemon
+dnrd $DNS
+else
+#inform DHCPD for DNS setting
+PIDFILE_DHCPD=/var/run/udhcpd.pid
+if [ -f $PIDFILE_DHCPD ] ; then
+PID_DHCPD=`cat $PIDFILE_DHCPD`
+if [ $PID_DHCPD != 0 ]; then
+echo "update_conf_dns" > /tmp/dhcpd_action
+sleep 1
+kill -17 $PID_DHCPD 2> /dev/null
+fi
+fi
+fi
+
+
+# enable firewall
+echo 'Set Firewall...'
+$START_FIREWALL
+#upnp.sh
+if [ -f /bin/vpn.sh ]; then
+        echo 'Setup VPN'
+	vpn.sh all
+fi
+#blog WAN DHCP Client Connected IP $ip
+#echo 'Set Static Route'
+$STOP_STATIC_ROUTE
+$START_STATIC_ROUTE wlan0
+#eval `$GETMIB NAT_ENABLED`
+#eval `$GETMIB RIP_ENABLED`
+#if [ "$NAT_ENABLED" = '0' ]; then
+#if [ "$RIP_ENABLED" = '1' ]; then
+#	dyn_route.sh
+#fi
+#fi
+#start ddns
+#echo "Re-Start DDNS"
+eval `flash get DDNS_ENABLED`
+if [ $DDNS_ENABLED = 1 ]; then
+killall -9 updatedd 2> /dev/null
+killall -9 ddns.sh 2> /dev/null
+eval `flash get DDNS_TIMEOUT`
+TIMEOUT=`expr $DDNS_TIMEOUT "*" 3600`
+###########kill sleep that ddns.sh created###############
+TMPFILEDDNS=/tmp/tmpfileddns
+line=0
+ps | grep "sleep $TIMEOUT" > $TMPFILEDDNS
+line=`cat $TMPFILEDDNS | wc -l`
+num=1
+while [ $num -le $line ];
+do
+	pat0=` head -n $num $TMPFILEDDNS | tail -n 1`
+	pat1=`echo $pat0 | cut -f1 -dS`  
+	pat2=`echo $pat1 | cut -f1 -d " "`  
+	kill -9 $pat2 2> /dev/null
+
+	num=`expr $num + 1`
+done
+###########################
+rm -f /var/firstddns 2> /dev/null
+rm -f /tmp/tmpfileddns 2> /dev/null
+ddns.sh option
+fi
+
+killall -9 igmpproxy 2> /dev/null
+if [ $IGMP_PROXY_DISABLED = 0 ]; then
+	igmpproxy wlan0 br0 &
+	#br_igmpsnoop need not depend on br_igmpproxy ; plus mark 2009-0218 
+	#echo 1 > /proc/br_igmpsnoop
+	#else
+	#echo 0 > /proc/br_igmpsnoop
+fi	
+fi 
+
+if [ $WAN_DHCP != 3 ] && [ $WAN_DHCP != 4 ] && [ $WAN_DHCP != 6 ] && [ $WAN_DHCP != 7 ] && [ $WAN_DHCP != 8 ]; then
+eval `flash get NTP_ENABLED`
+if [ $NTP_ENABLED = 1 ]; then
+if [ ! -f $NTP_PROCESS ]; then
+ntp.sh &
+fi
+fi
+fi
+

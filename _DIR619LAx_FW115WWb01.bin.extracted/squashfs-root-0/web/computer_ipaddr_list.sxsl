@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+This XSLT stylesheet transforms an XML report of LAN hosts received from a CGI procedure
+into an HTML display as appropriate for a specific UI.
+-->
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
+<xsl:output method="html" indent="yes"/>
+<xsl:param name="id_spec"/>
+<xsl:param name="onchange_spec"/>
+<xsl:template match="/">
+<select>
+<xsl:attribute name="id"><xsl:value-of select="$id_spec"/></xsl:attribute>
+<xsl:attribute name="onchange"><xsl:value-of select="$onchange_spec"/></xsl:attribute>
+<option value="-1">Computer Name</option>
+<xsl:for-each select="dhcp_clients/client">
+<option>
+<!-- Set some attributes for quick retrieval of other computer information -->
+<xsl:attribute name="mac"><xsl:value-of select="mac/text()"/></xsl:attribute>
+<xsl:attribute name="host_name"><xsl:value-of select="host_name/text()"/></xsl:attribute>
+<xsl:attribute name="ip_address"><xsl:value-of select="ip_address/text()"/></xsl:attribute>
+<xsl:attribute name="value"><xsl:value-of select="ip_address/text()"/></xsl:attribute>
+<xsl:choose>
+<xsl:when test="string-length(host_name/text()) > 0">
+<xsl:value-of select="host_name"/>
+</xsl:when>
+<xsl:otherwise>
+<xsl:value-of select="ip_address"/>
+</xsl:otherwise>
+</xsl:choose>
+</option>
+</xsl:for-each>
+</select>
+</xsl:template>
+</xsl:stylesheet>
+
+
+
+

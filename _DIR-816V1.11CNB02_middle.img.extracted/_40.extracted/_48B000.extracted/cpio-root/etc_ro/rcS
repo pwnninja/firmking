@@ -1,0 +1,28 @@
+#!/bin/sh
+
+#set date
+date -s "2013-01-01 00:00:00"
+
+mount -a
+mkdir -p /var/run
+cat /etc_ro/motd
+nvram_daemon&
+sleep 1
+#for telnet debugging
+telnetd
+goahead&
+#qos_timer&
+#AP699E8C.CW89C-5 not usbled
+#usbled&
+
+#for syslogd
+mkdir -p /var/log
+
+#for tmp
+mkdir -p /var/tmp
+
+#for tokenid
+mkdir -p /etc/RAMConfig
+
+echo "20000" > /proc/sys/net/nf_conntrack_max
+echo "ok" > /etc/RAMConfig/encrypt_config_flag
