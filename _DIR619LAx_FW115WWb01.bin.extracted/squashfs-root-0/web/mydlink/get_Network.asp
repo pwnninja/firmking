@@ -1,1 +1,0 @@
-<% getInfo("mydlink_network"); %>

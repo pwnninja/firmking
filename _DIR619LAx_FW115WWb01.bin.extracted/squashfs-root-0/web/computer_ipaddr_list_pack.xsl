@@ -1,1 +1,0 @@
-/var/web-lang/computer_ipaddr_list.xsl

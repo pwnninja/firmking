@@ -1,1 +1,0 @@
-/tmp/ajax_sync_time.asp

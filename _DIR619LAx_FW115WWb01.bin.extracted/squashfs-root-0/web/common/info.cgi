@@ -1,1 +1,0 @@
-/tmp/mydlink_version.txt
