@@ -1,5 +1,9 @@
-1.
-2.python3 firmking.py -s 2 -r 1-15 --log xx.fu 192.168.0.1
--s: seconds between two packets
--r: min and max 
-3.If you want to fuzz all the .fu files automatically, then run ./autofuzzall.sh
+1. Step 1: Static Analysis
+
+
+2. Step 2: Fuzzing
+python3 firmking.py -s 2 -r 1-15 xx.fu 192.168.0.1 --log 
+-s: seconds to sleep between two fuzz cases
+-r: min case number and max case number
+--log: record all logs
+If you want to fuzz all the .fu files automatically, then run ./autofuzzall.sh
