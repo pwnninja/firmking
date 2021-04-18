@@ -1,6 +1,6 @@
 1. Step 1: Static Analysis
 
-Use the following command to scan httpd_ac15 binary, and generate session files in ./scanresults.
+Use the following command to scan httpd_ac15 binary, and generate session files in ./scanresults:
  
 python3 scan_tenda.py template1.fu ./scanresults ./tests/httpd_ac15
 
